@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, make_response
 from sqlalchemy import create_engine
 from flask_cors import CORS, cross_origin
 from flask_sqlalchemy import SQLAlchemy
@@ -29,6 +29,20 @@ class Serializer(object):
     @staticmethod
     def serialize_list(l):
         return [m.serialize() for m in l]
+class Orders(db.Model):
+    userID = db.Column(db.Integer, default=0)
+    productID = db.Column(db.Integer, primary_key=True)
+    quantity = db.Column(db.Integer, default=0)
+    price = db.Column(db.Integer, default=0)
+
+    def __init__(self, userID, productID, quantity, price):
+        self.userID = userID
+        self.productID = productID
+        self.quantity = quantity
+        self.price = price
+
+        def __repr__(self):
+            return {'userID': self.userID, 'productID': self.productID, 'quantity': self.quantity, 'price': self.price}
 
 class Data(db.Model):
     productId =   db.Column(db.Integer, primary_key=True)
@@ -147,6 +161,32 @@ def resultIs(paramid):
         )
     queryObj = {'productId': product_query.productId,'name': product_query.name, 'descShort': product_query.descShort, 'descLong': product_query.descLong, 'visible': product_query.visible, 'stock': product_query.stock,'price': product_query.price,'categories': product_query.categories,'image': product_query.image }
     return jsonify(queryObj), {'content-type':'application/json'}
+
+@app.route('/order/add', methods=['GET', 'POST'])
+@cross_origin() # allow all origins all methods.
+def orderAdd():
+    userID = request.args.get('userID')
+    productID = request.args.get('productID')
+    quantity = request.args.get('quantity')
+    price = request.args.get('price')
+    #product_id_query = Orders.query.filter(Orders.productID == productID)
+    #print(product_id_query)
+    if price:
+        #there is no matching product id already
+        obj = Orders(int(userID), int(productID), int(quantity), int(price))
+        db.session.add(obj)
+        db.session.commit()
+        res = make_response(
+            jsonify(
+                {"userID": int(userID), "productID": int(productID), "quantity": int(quantity), "price": int(price)}
+            )
+        )
+    else:
+        res = make_response('duplicate product id', 400)
+    return res
+
+
+
 
 
 
